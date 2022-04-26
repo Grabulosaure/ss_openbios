@@ -1,0 +1,44 @@
+clflags.o: clflags.c clflags.h ../shared/types.h errhandler.h
+conditl.o: conditl.c scanner.h ../shared/types.h ticvocab.h dictionary.h \
+ errhandler.h conditl.h stack.h vocabfuncts.h usersymbols.h stream.h \
+ clflags.h
+devnode.o: devnode.c devnode.h ../shared/types.h ticvocab.h dictionary.h \
+ errhandler.h scanner.h vocabfuncts.h flowcontrol.h stream.h
+dictionary.o: dictionary.c emit.h ../shared/types.h macros.h ticvocab.h \
+ dictionary.h scanner.h vocabfuncts.h devnode.h clflags.h parselocals.h \
+ errhandler.h tokzesc.h conditl.h tracesyms.h
+emit.o: emit.c ../shared/pcihdr.h ../shared/types.h toke.h \
+ ../shared/types.h vocabfuncts.h ticvocab.h dictionary.h stack.h \
+ scanner.h emit.h clflags.h errhandler.h stream.h nextfcode.h
+errhandler.o: errhandler.c ../shared/types.h toke.h stream.h emit.h \
+ errhandler.h scanner.h ticvocab.h dictionary.h
+flowcontrol.o: flowcontrol.c ../shared/types.h toke.h emit.h \
+ vocabfuncts.h ticvocab.h dictionary.h scanner.h stack.h errhandler.h \
+ flowcontrol.h stream.h
+macros.o: macros.c macros.h ../shared/types.h ticvocab.h dictionary.h \
+ errhandler.h stream.h scanner.h devnode.h
+nextfcode.o: nextfcode.c toke.h ../shared/types.h nextfcode.h \
+ errhandler.h stream.h scanner.h ticvocab.h dictionary.h
+parselocals.o: parselocals.c parselocals.h ticvocab.h ../shared/types.h \
+ dictionary.h scanner.h errhandler.h clflags.h stream.h emit.h devnode.h \
+ flowcontrol.h tracesyms.h
+scanner.o: scanner.c macros.h ../shared/types.h ticvocab.h dictionary.h \
+ stack.h stream.h emit.h toke.h vocabfuncts.h scanner.h errhandler.h \
+ tokzesc.h conditl.h flowcontrol.h usersymbols.h clflags.h devnode.h \
+ tracesyms.h nextfcode.h parselocals.h
+stack.o: stack.c stack.h ../shared/types.h scanner.h ticvocab.h \
+ dictionary.h errhandler.h
+stream.o: stream.c emit.h ../shared/types.h stream.h errhandler.h toke.h
+strsubvocab.o: strsubvocab.c errhandler.h ../shared/types.h strsubvocab.h
+ticvocab.o: ticvocab.c ticvocab.h ../shared/types.h dictionary.h \
+ errhandler.h tracesyms.h devnode.h scanner.h vocabfuncts.h
+toke.o: toke.c ../shared/types.h toke.h stream.h stack.h emit.h \
+ vocabfuncts.h ticvocab.h dictionary.h scanner.h errhandler.h \
+ usersymbols.h clflags.h tracesyms.h devnode.h
+tokzesc.o: tokzesc.c tokzesc.h ../shared/types.h ticvocab.h dictionary.h \
+ stack.h emit.h stream.h scanner.h errhandler.h strsubvocab.h nextfcode.h \
+ tracesyms.h devnode.h
+tracesyms.o: tracesyms.c tracesyms.h ../shared/types.h ticvocab.h \
+ dictionary.h devnode.h errhandler.h scanner.h vocabfuncts.h toke.h
+usersymbols.o: usersymbols.c errhandler.h ../shared/types.h strsubvocab.h \
+ usersymbols.h scanner.h ticvocab.h dictionary.h

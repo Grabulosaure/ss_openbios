@@ -1,0 +1,9 @@
+addfcodes.o: addfcodes.c detok.h ../shared/types.h stream.h addfcodes.h
+decode.o: decode.c detok.h ../shared/types.h stream.h addfcodes.h
+detok.o: detok.c detok.h ../shared/types.h stream.h addfcodes.h
+dictionary.o: dictionary.c detok.h ../shared/types.h
+pcihdr.o: pcihdr.c ../shared/pcihdr.h ../shared/types.h detok.h \
+ ../shared/types.h
+printformats.o: printformats.c detok.h ../shared/types.h
+stream.o: stream.c stream.h ../shared/types.h detok.h ../shared/pcihdr.h \
+ ../shared/types.h
