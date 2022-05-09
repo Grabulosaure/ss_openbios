@@ -227,11 +227,13 @@ ob_sd_read_sector(esp_private_t *esp, sd_private_t *sd, int offset, int num)
         if ((i&31) ==31) DPRINTF ("\n");
     }
     */
+    /*
     for (unsigned i=0;i<32;i++) {
         if ((i&31) ==0) DPRINTF (" %03X : ",i);
         DPRINTF("%02X ",(unsigned)global_esp->buffer[i]);
         if ((i&31) ==31) DPRINTF ("\n");
     }
+    */
     return 0;
 }
 
@@ -312,8 +314,6 @@ inquiry(esp_private_t *esp, sd_private_t *sd)
     return 1;
 }
 
-#if 0
-
 
 static void
 ob_sd_read_blocks(sd_private_t **sd)
@@ -329,12 +329,13 @@ ob_sd_read_blocks(sd_private_t **sd)
         PUSH(0);
         return;
     }
-    spb = (*sd)->bs / 512;      // SPB = nombre de secteurs par bloc = 1
+    spb = (*sd)->bs / 512;
     
     while (n) {
         sect_offset = blk / spb;
-        pos = (blk - sect_offset * spb) * 512;      
+        pos = (blk - sect_offset * spb) * 512;
         sect_num = 1;
+        DPRINTF("ob_sd_read_blocks bs=%d spb=%d pos=%d sect_offset=%d\n", (*sd)->bs, spb,pos,sect_offset); 
         if (ob_sd_read_sector(global_esp, *sd, sect_offset, sect_num)) {
             DPRINTF("ob_sd_read_blocks: error\n");
             RET(0);
@@ -349,54 +350,6 @@ ob_sd_read_blocks(sd_private_t **sd)
     }
     PUSH(cnt);
 }
-#endif
-
-
-
-static void
-ob_sd_read_blocks(sd_private_t **sd)
-{
-    cell n = POP(), cnt = n;
-    ucell blk = POP();
-    char *dest = (char*)POP();
-    int sect_offset, sect_num;
-    int m;
-
-    DPRINTF("ob_sd_read_blocks id %d %lx block=%d n=%d\n", (*sd)->id, (unsigned long)dest, blk, n );
-    if ((*sd)->bs == 0) {
-        PUSH(0);
-        return;
-    }
-    
-    while (n) {
-        m=(n>(BUFSIZE/512))?(BUFSIZE/512):n;
-        sect_offset = blk;
-        sect_num = m;
-        
-        if (ob_sd_read_sector(global_esp, *sd, sect_offset, sect_num)) {
-            DPRINTF("ob_sd_read_blocks: error\n");
-            RET(0);
-        }
-        
-        memcpy(dest,global_esp->buffer,512*m);
-        dest += 512 * m;
-        n-=m;
-        blk+=m;
-        /*
-        pos = 0;
-        while (n && (pos < (512 * m))) {
-            memcpy(dest, global_esp->buffer + pos, 512);
-            pos += 512;
-            dest += 512;
-            n--;
-            blk++;
-        }*/
-    }
-    PUSH(cnt);
-}
-
-
-
 
 static void
 ob_sd_block_size(__attribute__((unused))sd_private_t **sd)
