@@ -82,6 +82,10 @@ extern volatile unsigned char *power_reg;
 extern volatile unsigned int *reset_reg;
 extern volatile struct sun4m_timer_regs *counter_regs;
 
+/* One-shot reboot boot-command scratch in the M48T08 NVRAM (survives warm reset) */
+void nvram_set_reboot_command(const char *str);
+int  nvram_get_reboot_command(char *buf, int len);
+
 void ob_new_obio_device(const char *name, const char *type);
 unsigned long ob_reg(uint64_t base, uint64_t offset, unsigned long size, int map);
 void ob_intr(int intr);

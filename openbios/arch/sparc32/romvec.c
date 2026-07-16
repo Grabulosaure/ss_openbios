@@ -251,7 +251,12 @@ void obp_printf(const char *fmt, ...)
 
 void obp_reboot(char *str)
 {
-    printk("rebooting (%s)\n", str);
+    printk("rebooting (%s)\n", str ? str : "");
+    /* Stash the boot string (e.g. Solaris installer's "disk:b") in NVRAM so
+       the next boot can honour it exactly once -- see nvram_get_reboot_command
+       consumption in arch_init().  The scratch survives the warm reset. */
+    if (str && *str)
+        nvram_set_reboot_command(str);
     *reset_reg = 1;
     printk("reboot failed\n");
     for (;;) {}
