@@ -61,8 +61,15 @@ variable file-size
   \ more potential boot devices, and return the first one that can be
   \ successfully opened.
 
-  \ Space-separated bootpath string
-  bl left-split 	\ bootpathstr bootpathstr-len bootdevstr bootdevstr-len
+  \ Space-separated bootpath string.  A parameter list that begins with an
+  \ option flag ("-...") specifies no boot device (e.g. "boot -s"), so keep the
+  \ whole string as arguments and fall back to boot-device -- matching OBP.
+  \ Otherwise split the leading device off the front.
+  dup 0> if over c@ ascii - = else false then if
+    0 0 		\ no device given: param stays as the arguments
+  else
+    bl left-split 	\ bootpathstr bootpathstr-len bootdevstr bootdevstr-len
+  then
   dup 0= if
 
     \ None specified. As per IEEE-1275 specification, search through each value

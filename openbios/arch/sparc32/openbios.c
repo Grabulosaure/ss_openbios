@@ -1791,7 +1791,33 @@ arch_init( void )
       printk (">> Video = CG3\n");
     else
       printk (">> Video = TCX\n");
- 
+
+    /* One-shot boot command left behind by obp_reboot() (e.g. the Solaris
+       installer's "reboot disk:b").  Consume it here and override boot-command
+       in RAM only (no update-nvram), so this boot honours it and it reverts to
+       the NVRAM default next time.  nvram_get_reboot_command() clears the
+       magic, so the override never repeats. */
+    {
+        char rbtcmd[128];
+
+        if (nvram_get_reboot_command(rbtcmd, sizeof(rbtcmd))) {
+            char bootcmd[160];
+
+            /* The romvec reboot string is the argument to "boot"; prepend
+               "boot " unless the caller already spelled out the full word. */
+            if (strncmp(rbtcmd, "boot", 4) == 0) {
+                strcpy(bootcmd, rbtcmd);
+            } else {
+                strcpy(bootcmd, "boot ");
+                strcat(bootcmd, rbtcmd);
+            }
+            printk(">> reboot boot-command = %s\n", bootcmd);
+            push_str(bootcmd);
+            push_str("boot-command");
+            fword("$setenv");
+        }
+    }
+
 #endif
 
 	device_end();

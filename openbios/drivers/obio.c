@@ -134,9 +134,107 @@ ob_eccmemctl_init(uint64_t base)
 }
 
 static unsigned char *nvram;
+static uint64_t nvram_phys;      /* physical base of the NVRAM (base + offset) */
 
 #define NVRAM_OB_START   (0)
-#define NVRAM_OB_SIZE    ((NVRAM_IDPROM - NVRAM_OB_START) & ~15)
+
+/* One-shot "reboot boot-command" scratch.
+ *
+ * obp_reboot() (e.g. the Solaris installer's "reboot disk:b") leaves the boot
+ * string here so the next boot can honour it exactly once.  It sits just below
+ * the idprom, inside the old FREE partition that OpenBIOS no longer walks (see
+ * NVRAM_OB_SIZE below), so the config machinery never touches it.  It survives
+ * a warm reset because the M48T08 NVRAM is on-chip RAM that the core reset does
+ * not clear.
+ *
+ * Access is by PHYSICAL address via ASI 0x20 (ASI_M_BYPASS), NOT the nvram[]
+ * virtual pointer: obp_reboot() runs in the client OS's MMU context, where the
+ * PROM's NVRAM virtual mapping has been reclaimed -- a plain nvram[] store
+ * there faults and the reset never fires.  The bypass hits the same physical
+ * cell in any context.
+ *
+ * Layout at NVRAM_REBOOT_OFF: [4-byte 'RBTC' magic][NUL-terminated string]
+ */
+/* Size of the OBP config area walked by nvconf_init().  This MUST stop exactly
+ * on a partition boundary in the NVRAM image, or the partition walk overshoots
+ * and prints "nvram error detected, zapping pram" on every boot.  The image's
+ * first partition is the 0x20-byte SYSTEM ("system") partition -- the only one
+ * OpenBIOS ever uses for config -- so stop there.  The rest (the old FREE
+ * partition up to the idprom) is unused by OpenBIOS and is where the reboot
+ * scratch lives, safely outside the walked region.
+ */
+#define NVRAM_OB_SIZE        0x20
+
+#define NVRAM_REBOOT_OFF     ((NVRAM_IDPROM - 0x80) & ~15)              /* 0x1f50 */
+#define NVRAM_REBOOT_STR_MAX (NVRAM_IDPROM - (NVRAM_REBOOT_OFF + 4))    /* string room */
+
+static const unsigned char nvram_reboot_magic[4] = { 'R', 'B', 'T', 'C' };
+
+static inline void nvram_pb_put(unsigned long pa, unsigned char v)
+{
+    __asm__ __volatile__("stba %0, [%1] 0x20" : : "r"(v), "r"(pa) : "memory");
+}
+
+static inline unsigned char nvram_pb_get(unsigned long pa)
+{
+    unsigned char v;
+    __asm__ __volatile__("lduba [%1] 0x20, %0" : "=r"(v) : "r"(pa) : "memory");
+    return v;
+}
+
+/* True only when the NVRAM physical base is reachable through a 32-bit
+   ASI-bypass address.  SS5 (0x71200000) qualifies; SS20 (0xff1200000) does
+   not, so the reboot-arg feature is simply skipped there (reset still works). */
+static int nvram_reboot_usable(void)
+{
+    return nvram_phys != 0 && (nvram_phys >> 32) == 0;
+}
+
+void
+nvram_set_reboot_command(const char *str)
+{
+    unsigned long base = (unsigned long)nvram_phys + NVRAM_REBOOT_OFF;
+    int i;
+
+    if (!nvram_reboot_usable() || !str)
+        return;
+    for (i = 0; i < NVRAM_REBOOT_STR_MAX - 1 && str[i]; i++)
+        nvram_pb_put(base + 4 + i, (unsigned char)str[i]);
+    nvram_pb_put(base + 4 + i, 0);
+    /* write the magic last so a torn write is never mistaken for valid */
+    nvram_pb_put(base + 0, nvram_reboot_magic[0]);
+    nvram_pb_put(base + 1, nvram_reboot_magic[1]);
+    nvram_pb_put(base + 2, nvram_reboot_magic[2]);
+    nvram_pb_put(base + 3, nvram_reboot_magic[3]);
+}
+
+int
+nvram_get_reboot_command(char *buf, int len)
+{
+    unsigned long base = (unsigned long)nvram_phys + NVRAM_REBOOT_OFF;
+    int i;
+
+    if (!nvram_reboot_usable() || !buf || len <= 0)
+        return 0;
+    if (nvram_pb_get(base + 0) != nvram_reboot_magic[0] ||
+        nvram_pb_get(base + 1) != nvram_reboot_magic[1] ||
+        nvram_pb_get(base + 2) != nvram_reboot_magic[2] ||
+        nvram_pb_get(base + 3) != nvram_reboot_magic[3])
+        return 0;
+    for (i = 0; i < len - 1 && i < NVRAM_REBOOT_STR_MAX - 1; i++) {
+        unsigned char c = nvram_pb_get(base + 4 + i);
+        if (!c)
+            break;
+        buf[i] = (char)c;
+    }
+    buf[i] = '\0';
+    /* one-shot: clear the magic so subsequent boots use the default */
+    nvram_pb_put(base + 0, 0);
+    nvram_pb_put(base + 1, 0);
+    nvram_pb_put(base + 2, 0);
+    nvram_pb_put(base + 3, 0);
+    return 1;
+}
 
 void
 arch_nvram_get(char *data)
@@ -206,6 +304,9 @@ extern uint16_t machine_id;
 static void
 ob_nvram_init(uint64_t base, uint64_t offset)
 {
+    /* Remember the physical base so the reboot scratch can be reached via
+       ASI-bypass from the client OS's MMU context (see nvram_*_reboot_command). */
+    nvram_phys = base + offset;
 #ifdef CONFIG_TACUS
     struct Sun_nvram header;
     
